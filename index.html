@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Izreži in poveži: dvojiško ↔ desetiško</title>
+  <title>Poveži števila</title>
   <style>
     body {
       font-family: sans-serif;
@@ -12,7 +12,11 @@
       background-color: #f9f9f9;
     }
     h1 {
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    #instructions {
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
     }
     #controls {
       margin-bottom: 1.5rem;
@@ -31,7 +35,6 @@
     }
     .columns {
       display: flex;
-      flex-wrap: wrap;
       justify-content: center;
       gap: 2rem;
       margin-top: 2rem;
@@ -42,17 +45,34 @@
       align-items: center;
       flex: 1 1 200px;
     }
-    .pair {
+    .placeholder, .dropzone {
+      height: 42px;
       margin: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pair {
       padding: 0.5rem 1rem;
       border: 1px dashed #aaa;
       background: white;
       width: 100px;
+      cursor: move;
+    }
+    .dropzone {
+      border: 2px dashed #aaa;
+      background-color: #eee;
+      width: 100px;
+      transition: background-color 0.5s, border-color 0.5s;
     }
   </style>
 </head>
 <body>
-  <h1>Izreži in poveži: dvojiško ↔ desetiško</h1>
+  <h1>Poveži števila</h1>
+  <div id="instructions">
+    Izberi število nalog, ki jih želiš rešiti. Izberi obseg števil.<br />
+    Dvojiško število iz levega stolpca potegni na ustrezno desetiško število.
+  </div>
   <div id="controls">
     <div class="btn-group">
       <span>Število parov:</span>
@@ -104,29 +124,72 @@
       binaryCol.innerHTML = '';
       decimalCol.innerHTML = '';
 
-      const binaryPairs = selected.map(n => n.toString(2).padStart(5, '0'));
+      const binaryPairs = selected.map(n => ({ value: n.toString(2).padStart(5, '0'), match: n.toString() }));
       const decimalPairs = selected.map(n => n.toString());
 
-      shuffle(binaryPairs).forEach(val => {
+      binaryPairs.forEach(pair => {
+        const container = document.createElement('div');
+        container.className = 'placeholder';
+        container.id = 'placeholder-' + pair.value;
+
         const div = document.createElement('div');
         div.className = 'pair';
-        div.textContent = val;
-        binaryCol.appendChild(div);
+        div.textContent = pair.value;
+        div.draggable = true;
+        div.dataset.match = pair.match;
+        div.id = 'bin-' + pair.value;
+        div.addEventListener('dragstart', dragStart);
+
+        container.appendChild(div);
+        binaryCol.appendChild(container);
       });
 
       shuffle(decimalPairs).forEach(val => {
-        const div = document.createElement('div');
-        div.className = 'pair';
-        div.textContent = val;
-        decimalCol.appendChild(div);
+        const dropzone = document.createElement('div');
+        dropzone.className = 'dropzone';
+        dropzone.textContent = val;
+        dropzone.dataset.value = val;
+        dropzone.addEventListener('dragover', dragOver);
+        dropzone.addEventListener('drop', handleDrop);
+        decimalCol.appendChild(dropzone);
       });
+    }
+
+    function dragStart(e) {
+      e.dataTransfer.setData('text/plain', e.target.dataset.match);
+      e.dataTransfer.setData('element-id', e.target.id);
+    }
+
+    function dragOver(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const draggedMatch = e.dataTransfer.getData('text/plain');
+      const draggedId = e.dataTransfer.getData('element-id');
+      const draggedEl = document.getElementById(draggedId);
+      const dropValue = e.target.dataset.value;
+
+      if (draggedMatch === dropValue) {
+        e.target.textContent = `${draggedEl.textContent} = ${dropValue}`;
+        e.target.style.backgroundColor = '#c8e6c9';
+        e.target.style.borderColor = '#2e7d32';
+        draggedEl.parentNode.innerHTML = '&nbsp;';
+      } else {
+        e.target.style.backgroundColor = '#ffcdd2';
+        e.target.style.borderColor = '#c62828';
+        setTimeout(() => {
+          e.target.style.backgroundColor = '#eee';
+          e.target.style.borderColor = '#aaa';
+        }, 1000);
+      }
     }
 
     function shuffle(arr) {
       return [...arr].sort(() => Math.random() - 0.5);
     }
 
-    // začetna naloga
     window.addEventListener('DOMContentLoaded', generatePairs);
   </script>
 </body>
